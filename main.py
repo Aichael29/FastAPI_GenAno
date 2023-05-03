@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import random
 import csv
+from datetime import datetime, timedelta
 from fct import *
 app = FastAPI()
 
@@ -193,5 +194,30 @@ async def encrypt_file_endpoint(input_data: EncryptFileInput):
     "separateur": ";"
 
 }"""
+
+@app.post("/generate_data_int_str_date")
+async def generate_data(random_data: RandomData):
+    data = []
+    for i in range(random_data.count):
+        # Générer une valeur aléatoire de type int
+        int_val = random.randint(random_data.min_value, random_data.max_value)
+
+        # Générer une valeur aléatoire de type str
+        str_val = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz', k=random.randint(1, 10)))
+
+        # Générer une valeur aléatoire de type date
+        date_val = datetime.today() - timedelta(days=random.randint(0, 365))
+
+        # Ajouter les valeurs dans la liste de données
+        data.append((int_val, str_val, date_val.strftime("%Y-%m-%d")))
+
+    # Écrire les données dans un fichier CSV
+    with open('random_data.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['int', 'str', 'date'])
+        writer.writerows(data)
+
+    return {"message": f"Les données ont été générées et écrites dans le fichier 'random_data.csv'."}
+
 
 
