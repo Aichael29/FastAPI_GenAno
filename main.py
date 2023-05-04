@@ -1,16 +1,13 @@
-
 from fastapi import FastAPI
 from typing import Optional
 from pydantic import BaseModel
-from fastapi.responses import JSONResponse
-
-import json
+import sqlite3
 
 app = FastAPI()
 
-# Load data from file
-with open("data.json", encoding="utf-8") as f:
-    countries_data = json.load(f)
+# Connect to the database
+conn = sqlite3.connect('mydatabase.db')
+c = conn.cursor()
 
 # Define Pydantic models
 class Country(BaseModel):
@@ -22,60 +19,51 @@ class Country(BaseModel):
 # Define endpoints
 @app.get("/countries")
 async def get_all_countries():
+    c.execute("SELECT name, capital, region, population FROM countries")
     countries = []
-    for country in countries_data:
-        countries.append(Country(name=country["name"]["common"], capital=country["capital"][0]).dict())
+    for row in c.fetchall():
+        countries.append(Country(name=row[0], capital=row[1], region=row[2], population=row[3]).dict())
     return countries
 
 @app.get("/countries/{name}")
 async def get_country_by_name(name: str):
-    for country in countries_data:
-        if country["name"]["common"].lower() == name.lower():
-            return Country(name=country["name"]["common"], capital=country["capital"][0], region=country["region"], population=country["population"]).dict()
+    c.execute("SELECT name, capital, region, population FROM countries WHERE name=?", (name,))
+    row = c.fetchone()
+    if row:
+        return Country(name=row[0], capital=row[1], region=row[2], population=row[3]).dict()
     return {"error": "Country not found"}
 
 @app.get("/countries/region/{region}")
 async def get_countries_by_region(region: str):
+    c.execute("SELECT name, capital, region, population FROM countries WHERE region=?", (region,))
     countries = []
-    for country in countries_data:
-        if country["region"].lower() == region.lower():
-            countries.append(Country(name=country["name"]["common"], capital=country["capital"][0]).dict())
+    for row in c.fetchall():
+        countries.append(Country(name=row[0], capital=row[1], region=row[2], population=row[3]).dict())
     if len(countries) == 0:
         return {"error": "Region not found"}
     return countries
 
 @app.post("/countries")
 async def add_country(country: Country):
-    for c in countries_data:
-        if c["name"]["common"].lower() == country.name.lower():
-            return {"error": "Country already exists"}
-    new_country = {
-        "name": {"common": country.name},
-        "capital": [country.capital]
-    }
-    if country.region:
-        new_country["region"] = country.region
-    if country.population:
-        new_country["population"] = country.population
-    countries_data.append(new_country)
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(countries_data, f, indent=4)
+    c.execute("SELECT name FROM countries WHERE name=?", (country.name,))
+    row = c.fetchone()
+    if row:
+        return {"error": "Country already exists"}
+    c.execute("INSERT INTO countries (name, capital, region, population) VALUES (?, ?, ?, ?)", (country.name, country.capital, country.region, country.population))
+    conn.commit()
     return {"message": "Country added successfully"}
 
 @app.put("/countries/{name}")
 async def update_country_by_name(name: str, country: Country):
-    for c in countries_data:
-        if c["name"]["common"].lower() == name.lower():
-            c["capital"][0] = country.capital
-            if country.region:
-                c["region"] = country.region
-            if country.population:
-                c["population"] = country.population
-            with open("data.json", "w", encoding="utf-8") as f:
-                json.dump(countries_data, f, indent=4)
-            return {"message": "Country updated successfully"}
-    return {"error": "Country not found"}
+    c.execute("SELECT name FROM countries WHERE name=?", (name,))
+    row = c.fetchone()
+    if not row:
+        return {"error": "Country not found"}
+    c.execute("UPDATE countries SET capital=?, region=?, population=? WHERE name=?", (country.capital, country.region, country.population, name))
+    conn.commit()
+    return {"message": "Country updated successfully"}
 
-
-
-
+# Close the database connection on exit
+@app.on_event("shutdown")
+def shutdown_event():
+    conn.close()
