@@ -117,11 +117,12 @@ exemple d'execution
 
 }
 """
-
+class RandomData2(BaseModel):
+    file_path: str
 @app.put("/update_csv/{line_number}/{new_value}")
-async def update_csv(line_number: int, new_value: int):
+async def update_csv(path: RandomData2,line_number: int, new_value: int):
     # Ouvrir le fichier CSV et lire les données
-    with open('C:/Users/pc/Desktop/stage_inwi/random_data1.csv', mode='r') as csv_file:
+    with open(path.file_path, mode='r') as csv_file:
         csv_reader = csv.reader(csv_file)
         data = list(csv_reader)
 
@@ -129,17 +130,22 @@ async def update_csv(line_number: int, new_value: int):
     data[line_number][0] = new_value
 
     # Écrire les données modifiées dans le fichier CSV
-    with open('C:/Users/pc/Desktop/stage_inwi/random_data1.csv', mode='w', newline='') as csv_file:
+    with open(path.file_path, mode='w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerows(data)
 
     return {"message": f"Ligne {line_number} modifiée avec succès!"}
-#exemple d'execution :http://localhost:8000/update_csv/1/42
 
+"""
+exemple d'execution :http://localhost:8000/update_csv/1/42
+{
+    "file_path":"C:/Users/pc/Desktop/stage_inwi/random_data1.csv"
+}
+"""
 @app.delete("/delete_csv/{line_number}")
-async def delete_csv(line_number: int):
+async def delete_csv(path: RandomData2,line_number: int):
     # Ouvrir le fichier CSV et lire les données
-    with open('C:/Users/pc/Desktop/stage_inwi/random_data1.csv', mode='r') as csv_file:
+    with open(path.file_path, mode='r') as csv_file:
         csv_reader = csv.reader(csv_file)
         data = list(csv_reader)
 
@@ -147,12 +153,17 @@ async def delete_csv(line_number: int):
     del data[line_number]
 
     # Écrire les données modifiées dans le fichier CSV
-    with open('C:/Users/pc/Desktop/stage_inwi/random_data1.csv', mode='w', newline='') as csv_file:
+    with open(path.file_path, mode='w', newline='') as csv_file:
         writer = csv.writer(csv_file)
         writer.writerows(data)
 
     return {"message": f"Ligne {line_number} supprimée avec succès!"}
-"""exemple d'execution :http://localhost:8000/delete_csv/2"""
+"""exemple d'execution :http://localhost:8000/delete_csv/2
+  {
+    "file_path":"C:/Users/pc/Desktop/stage_inwi/random_data1.csv"
+
+}
+"""
 class EncryptFileInput(BaseModel):
     fichier_entree: str
     fichier_sortie: str
