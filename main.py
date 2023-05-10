@@ -1,17 +1,16 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fct import *
+import pandas as pd
 import random
 import csv
-from fct import *
 from typing import List, Dict, Optional
-
 app = FastAPI()
 
 class RandomData(BaseModel):
     min_value: int
     max_value: int
-    count: int
-    file_path: Optional[str] = None
+    count:int
 
 @app.get("/")
 async def root():
@@ -103,15 +102,15 @@ class EncryptFileInput(BaseModel):
 @app.post("/encrypt_file")
 async def encrypt_file_endpoint(input_data: EncryptFileInput):
     if input_data.fichier_entree is None:
-        return {"message":"enter le chemin de fichier_entree"}
+        return {"message":" le fichier_entree n'est pas spécifié"}
     if input_data.fichier_sortie is None:
-        return {"message":"enter le chemin de fichier_sortie"}
+        return {"message":"le fichier_sortie n'est pas spécifié "}
     if input_data.operation is None:
-        return {"message":"enter le chemin de operation"}
+        return {"message":"l'operation à effectué n'est pas spécifié"}
     if input_data.cle_chiffrement is None:
-        return {"message":"enter le chemin de cle_chiffrement"}
+        return {"message":"le cle_chiffrement n'est pas spécifié"}
     if input_data.mode_chiffrement is None:
-        return {"message":"enter le chemin de mode_chiffrement"}
+        return {"message":"le mode_chiffrement n'est pas spécifié"}
 
     # Lire le fichier d'entrée CSV dans un DataFrame
     try:
@@ -141,7 +140,8 @@ async def encrypt_file_endpoint(input_data: EncryptFileInput):
 
     return {"message": "Le traitement du fichier a été effectué avec succès."}
 
-""" exemple d'execution :  http://localhost:8000/encrypt_file
+""" 
+exemple d'execution :  http://localhost:8000/encrypt_file
 {
     "fichier_entree": "C:/Users/pc/Desktop/stage_inwi/data.csv",
     "fichier_sortie": "C:/Users/pc/Desktop/stage_inwi/dataDA1.csv",
@@ -155,17 +155,16 @@ async def encrypt_file_endpoint(input_data: EncryptFileInput):
 }"""
 
 
-
 class RandomDataGenerator:
-    def __init__(self, column_names: List[str], column_types: Dict[str, str]):
-        self.column_names = column_names
+    def __init__(self, column_types: Dict[str, str]):
         self.column_types = column_types
 
     def generate_random_data(self, num_rows: int, file_path: str) -> None:
-        if file_path is None:
-            file_path="C:/Users/pc/Desktop/stage_inwi/random_data.csv"
+        for column_type in self.column_types.values():
+            if column_type not in ["int", "str", "bool", "float"]:
+                return False
         with open(file_path, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=self.column_names)
+            writer = csv.DictWriter(csvfile, fieldnames=self.column_types.keys())
             writer.writeheader()
             for i in range(num_rows):
                 row = {}
@@ -175,23 +174,24 @@ class RandomDataGenerator:
                     elif column_type == "float":
                         row[column_name] = random.uniform(0, 100)
                     elif column_type == "str":
-                        row[column_name] = ''.join(random.choices(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], k=10))
-                    else:
-                        raise ValueError("Invalid column type: {}".format(column_type))
+                        row[column_name] = ''.join(
+                            random.choices(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], k=10))
+                    elif column_type == "bool":
+                        row[column_name] = random.choice([True, False])
                 writer.writerow(row)
+            return True
 
 
 class RandomDataRequest(BaseModel):
     num_rows: int
-    file_path: Optional[str] = None
-    column_names: List[str]
+    file_path: Optional[str] = "C:/Users/pc/Desktop/stage_inwi/random_data.csv"
     column_types: Dict[str, str]
 
-@app.post("/generate_random_data")
+
+@app.post("/generate_and_store")
 def generate_random_data(request: RandomDataRequest):
-    generator = RandomDataGenerator(request.column_names, request.column_types)
-    generator.generate_random_data(request.num_rows, request.file_path)
-    return {"message": "Data generated and saved to {}".format(request.file_path)}
-
-
-
+    generator = RandomDataGenerator(request.column_types)
+    if generator.generate_random_data(request.num_rows, request.file_path):
+        return {"message": "Data generated and saved to {}".format(request.file_path)}
+    else:
+        return {"error": "type colonne invalide "}
