@@ -26,6 +26,46 @@ async def generate_random_data(data: RandomData):
     "max_value": 100,
     "count": 5
 }"""
+class RandomDataGenerator:
+    def __init__(self, column_types: Dict[str, str]):
+        self.column_types = column_types
+
+    def generate_random_data(self, num_rows: int, file_path: str) -> None:
+        for column_type in self.column_types.values():
+            if column_type not in ["int", "str", "bool", "float"]:
+                return False
+        with open(file_path, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=self.column_types.keys())
+            writer.writeheader()
+            for i in range(num_rows):
+                row = {}
+                for column_name, column_type in self.column_types.items():
+                    if column_type == "int":
+                        row[column_name] = random.randint(0, 100)
+                    elif column_type == "float":
+                        row[column_name] = random.uniform(0, 100)
+                    elif column_type == "str":
+                        row[column_name] = ''.join(
+                            random.choices(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], k=10))
+                    elif column_type == "bool":
+                        row[column_name] = random.choice([True, False])
+                writer.writerow(row)
+            return True
+
+
+class RandomDataRequest(BaseModel):
+    num_rows: int
+    file_path: Optional[str] = "C:/Users/pc/Desktop/stage_inwi/random_data.csv"
+    column_types: Dict[str, str]
+
+
+@app.post("/generate_and_store")
+def generate_random_data(request: RandomDataRequest):
+    generator = RandomDataGenerator(request.column_types)
+    if generator.generate_random_data(request.num_rows, request.file_path):
+        return {"message": "Data generated and saved to {}".format(request.file_path)}
+    else:
+        return {"error": "type colonne invalide "}
 class RandomData2(BaseModel):
     file_path: str
     line_number: int
@@ -63,7 +103,7 @@ exemple d'execution :http://localhost:8000/update
 """
 
 @app.delete("/delete")
-def delete_csv_row(request: RandomData2):
+def delete(request: RandomData2):
     # Ouvrir le fichier CSV en mode lecture
     with open(request.file_path, 'r', newline='') as csvfile:
         reader = csv.reader(csvfile)
@@ -155,43 +195,4 @@ exemple d'execution :  http://localhost:8000/encrypt_file
 }"""
 
 
-class RandomDataGenerator:
-    def __init__(self, column_types: Dict[str, str]):
-        self.column_types = column_types
 
-    def generate_random_data(self, num_rows: int, file_path: str) -> None:
-        for column_type in self.column_types.values():
-            if column_type not in ["int", "str", "bool", "float"]:
-                return False
-        with open(file_path, 'w', newline='') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=self.column_types.keys())
-            writer.writeheader()
-            for i in range(num_rows):
-                row = {}
-                for column_name, column_type in self.column_types.items():
-                    if column_type == "int":
-                        row[column_name] = random.randint(0, 100)
-                    elif column_type == "float":
-                        row[column_name] = random.uniform(0, 100)
-                    elif column_type == "str":
-                        row[column_name] = ''.join(
-                            random.choices(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'], k=10))
-                    elif column_type == "bool":
-                        row[column_name] = random.choice([True, False])
-                writer.writerow(row)
-            return True
-
-
-class RandomDataRequest(BaseModel):
-    num_rows: int
-    file_path: Optional[str] = "C:/Users/pc/Desktop/stage_inwi/random_data.csv"
-    column_types: Dict[str, str]
-
-
-@app.post("/generate_and_store")
-def generate_random_data(request: RandomDataRequest):
-    generator = RandomDataGenerator(request.column_types)
-    if generator.generate_random_data(request.num_rows, request.file_path):
-        return {"message": "Data generated and saved to {}".format(request.file_path)}
-    else:
-        return {"error": "type colonne invalide "}
