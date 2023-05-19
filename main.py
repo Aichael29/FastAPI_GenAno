@@ -55,7 +55,7 @@ class RandomDataGenerator:
 
 class RandomDataRequest(BaseModel):
     num_rows: int
-    file_path: Optional[str] = "C:/Users/pc/Desktop/stage_inwi/random_data.csv"
+    file_path: Optional[str] = "C:/Users/hp/Desktop/fastApi_resultat/random_data.csv"
     column_types: Dict[str, str]
 
 
@@ -67,11 +67,16 @@ def generate_random_data(request: RandomDataRequest):
     else:
         return {"error": "type colonne invalide "}
 class RandomData2(BaseModel):
-    file_path: str
-    line_number: int
+    file_path: str=None
+    line_number: int=0
     new_values: Optional[Dict[str, str]] = None
 @app.put("/update")
 def update_row(request: RandomData2):
+    if request.file_path is None:
+        return {"message": " file_path n'est pas spécifié"}
+    if request.line_number == 0:
+        return {"message": " line_number n'est pas spécifié"}
+    request.line_number= request.line_number-1
     with open(request.file_path, 'r', newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = [row for row in reader]
@@ -85,13 +90,14 @@ def update_row(request: RandomData2):
         writer = csv.DictWriter(csvfile, fieldnames=reader.fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+        request.line_number = request.line_number + 1
 
     return {"message": "Row {} updated in {}".format(request.line_number, request.file_path)}
 
 """
 exemple d'execution :http://localhost:8000/update
 {
-    "file_path": "C:/Users/pc/Desktop/stage_inwi/random_data1.csv",
+    "file_path": "C:/Users/hp/Desktop/fastApi_resultat/random_data.csv",
     "line_number": 2,
     "new_values": {
         "id": 1999,
@@ -101,9 +107,15 @@ exemple d'execution :http://localhost:8000/update
     }
 }
 """
-
+class RandomData3(BaseModel):
+    file_path: str= None
+    line_number: int=0
 @app.delete("/delete")
-def delete(request: RandomData2):
+def delete(request: RandomData3):
+    if request.file_path is None:
+        return {"message": " file_path n'est pas spécifié"}
+    if request.line_number == 0:
+        return {"message": " line_number n'est pas spécifié"}
     # Ouvrir le fichier CSV en mode lecture
     with open(request.file_path, 'r', newline='') as csvfile:
         reader = csv.reader(csvfile)
@@ -123,7 +135,7 @@ def delete(request: RandomData2):
 
     return {"message": f"Ligne {request.line_number} supprimée de {request.file_path}"}
 """{
-    "file_path": "C:/Users/pc/Desktop/stage_inwi/random_data1.csv",
+    "file_path": "C:/Users/hp/Desktop/fastApi_resultat/random_data.csv",
     "line_number": 2
 }"""
 
@@ -183,8 +195,8 @@ async def encrypt_file_endpoint(input_data: EncryptFileInput):
 """ 
 exemple d'execution :  http://localhost:8000/encrypt_file
 {
-    "fichier_entree": "C:/Users/pc/Desktop/stage_inwi/data.csv",
-    "fichier_sortie": "C:/Users/pc/Desktop/stage_inwi/dataDA1.csv",
+    "fichier_entree": "C:/Users/hp/Desktop/fastApi_resultat/random_data.csv",
+    "fichier_sortie": "C:/Users/pc/Desktop/stage_inwi/data.csv",
     "operation": "chiffrement",
     "cle_chiffrement": "ma_cle_secrete12",
     "mode_chiffrement": "CBC",
