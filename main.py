@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fct import *
@@ -108,14 +110,25 @@ exemple d'execution :http://localhost:8000/update
 }
 """
 class RandomData3(BaseModel):
-    file_path: str= None
-    line_number: int=0
+    file_path: str = None
+    delete_file: bool = False
+    line_number: Optional[int] = 0
+
 @app.delete("/delete")
 def delete(request: RandomData3):
     if request.file_path is None:
-        return {"message": " file_path n'est pas spécifié"}
+        return {"message": "Le chemin du fichier n'est pas spécifié."}
+
+    if request.delete_file:
+        try:
+            os.remove(request.file_path)
+            return {"message": "Fichier supprimé."}
+        except FileNotFoundError:
+            return {"message": "Le fichier spécifié n'existe pas."}
+
     if request.line_number == 0:
-        return {"message": " line_number n'est pas spécifié"}
+        return {"message": "Le numéro de ligne n'est pas spécifié."}
+
     # Ouvrir le fichier CSV en mode lecture
     with open(request.file_path, 'r', newline='') as csvfile:
         reader = csv.reader(csvfile)
@@ -123,7 +136,7 @@ def delete(request: RandomData3):
 
     # Vérifier si l'index de ligne spécifié est valide
     if request.line_number < 0 or request.line_number >= len(rows):
-        return{"message":"L'index de ligne spécifié n'existe pas dans le fichier CSV."}
+        return {"message": "Le numéro de ligne spécifié n'existe pas dans le fichier CSV."}
 
     # Supprimer la ligne spécifiée
     del rows[request.line_number]
